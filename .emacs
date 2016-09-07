@@ -1,3 +1,6 @@
+;;global varibale.
+;;end global variable.
+
 ;; global hotkey.
 
 (global-set-key (kbd "C-M-p") 'move-text-up)
@@ -5,8 +8,45 @@
 (global-set-key (kbd "C-M-j") 'to-speak-region)
 (global-set-key (kbd "C-c g") 'revert-buffer)
 
-;; custome function definitions.
+  ;; global default hotkey.
+  (global-set-key (kbd "C-l") 'recenter-top-bottom)
+  (global-set-key (kbd "C-u") 'recenter)
 
+;; global settings
+(defalias 'yes-or-no-p 'y-or-n-p)
+
+(setq make-backup-files nil)
+(setq backup-inhibited t)
+(setq auto-save-default nil)
+(setq confirm-kill-emacs nil)
+
+(set-default 'truncate-lines t)
+
+(setq visible-bell t
+      column-number-mode t
+      echo-keystrokes 0.1
+      font-lock-maximum-decoration t
+      inhibit-startup-message t
+      transient-mark-mode t
+      color-theme-is-global t
+      shift-select-mode nil
+      mouse-yank-at-point t
+      ;;require-final-newline t
+      truncate-partial-width-windows nil
+      delete-by-moving-to-trash nil
+      uniquify-buffer-name-style 'forward
+      ediff-window-setup-function 'ediff-setup-windows-plain
+      xterm-mouse-mode t)
+
+(setq locale-coding-system 'utf-8)
+(set-terminal-coding-system 'utf-8)
+(set-keyboard-coding-system 'utf-8)
+(set-selection-coding-system 'utf-8)
+(prefer-coding-system 'utf-8)
+
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+;; custome function definitions.
 (defun drag-line-custome (arg)
   "Drag the line at point ARG lines forward."
   (interactive "p")
@@ -84,6 +124,29 @@ NOTE: part of https://github.com/bbatsov/prelude."
   (interactive)
       (revert-buffer t t))
 
+;;; translate UI functions...
+(defun translate-at-point2 ()
+  (interactive)
+  (if (setq bounds (bounds-of-thing-at-point 'word))
+      (translation-buffer2 (buffer-substring-no-properties
+                       (car bounds)
+                       (cdr bounds)))
+      (message "don't find any word.")))
+
+
+(defun translation-buffer2 (str)
+  (let ((buffer-name "*translate dictionary*"))
+    (with-output-to-temp-buffer buffer-name
+      (select-window (display-buffer buffer-name))
+      (set-buffer buffer-name)
+      (set-process-sentinel
+       (start-file-process "jopa" buffer-name "~/emacs/sbcl/dictionary/dictionary-cli2.lisp" str)
+       (lambda (process string)
+         (message "I've done."))))))
+;;; translate UI functions.
+
+(global-set-key (kbd "C-t") 'mc/mark-next-like-this)
+
 (require 'package)
 (add-to-list
    'package-archives
@@ -93,6 +156,43 @@ NOTE: part of https://github.com/bbatsov/prelude."
 (add-to-list 'package-archives '("marmalade" . "https://marmalade-repo.org/packages/"))
 (package-initialize)
 
+(require 'grep-a-lot)
+(grep-a-lot-setup-keys)
+
+;;(eshell-command "espeak -s 100 -v en-polish  --ipa=3 \"where\"")
+
+(defun espeak-buffer2 (str)
+  (message str)
+  (let ((buffer-name "*speak-buffer*"))
+    (with-output-to-temp-buffer buffer-name
+      (select-window (display-buffer buffer-name))
+      (set-buffer buffer-name)
+      (let ((proc
+             (start-process "emacs-espeak-process" buffer-name "espeak" "-s 100 -v en-uk  --ipa=2 \"" str "\"")))
+        (set-process-filter proc (lambda (process string)
+                                   (message "this isn't work.")))
+        (set-process-sentinel proc
+                              (lambda (process string)
+                                (message string)))))))
+
+(defun to-speak-at-point ()
+    (interactive "r")
+    (if (setq bounds (bounds-of-thing-at-point 'word))
+      (espeak-buffer2 (buffer-substring-no-properties
+                       (car bounds)
+                       (cdr bounds)))
+      (message "don't find any word.")))
+
+
+
+(defun to-speak-region (start end)
+  "Print number of lines and characters in the region."
+  (interactive "r")
+  (eshell-command (concat "espeak -s 100 -v en-uk  --ipa=2 \"" (buffer-substring start end) "\""))
+;;  (message "%s" (concat "espeak -s 100 -v en-uk  --ipa=2 \"" (buffer-substring start end) "\""))
+)
+
+
 ;; initialize global modes.
 ;;(show-paren-mode)
 
@@ -100,7 +200,26 @@ NOTE: part of https://github.com/bbatsov/prelude."
   ;; Replace "sbcl" with the path to your implementation
   (setq inferior-lisp-program "sbcl")
 
+;; ace-jump package.
+(autoload
+  'ace-jump-mode
+  "ace-jump-mode"
+  "Emacs quick move minor mode"
+  t)
 
+(eval-after-load "ace-jump-mode"
+  '(ace-jump-mode-enable-mark-sync))
+;; end ace-jump package.
+
+;; highlight-parentheses
+(require 'highlight-parentheses)
+
+(define-globalized-minor-mode global-highlight-parentheses-mode highlight-parentheses-mode
+  (lambda nil (highlight-parentheses-mode t)))
+
+(global-highlight-parentheses-mode t)
+
+;; codesearch 
 (require 'codesearch)
 
 (require 'multiple-cursors)
@@ -134,7 +253,10 @@ NOTE: part of https://github.com/bbatsov/prelude."
 (global-set-key (kbd "C-<") 'mc/mark-previous-like-this)
 (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
+(global-set-key (kbd "C-c n") 'psw-switch-buffer)
+(define-key global-map (kbd "C-c SPC") 'ace-jump-mode)
 (define-key global-map [f5] 'toggle-truncate-lines)
+(define-key global-map (kbd "C-x SPC") 'ace-jump-mode-pop-mark)
 ;;(keyboard-translate ?\C-f ?\C-l)
 
 ;;(keyboard-translate ?\C-l ?\C-f)
@@ -154,6 +276,10 @@ NOTE: part of https://github.com/bbatsov/prelude."
 ;;(keyboard-translate ?\M-n ?\M-k)
 ;;(keyboard-translate ?\M-k ?\M-n)
 
+(require 'multiple-cursors)
+    (global-set-key (kbd "C-w") 'mc/mark-next-like-this)
+;;    (global-set-key (kbd "C-q") 'mc/mark-previous-like-this)
+;;    (global-set-key (kbd "C-c C-<") 'mc/mark-all-like-this)
 
 (org-babel-do-load-languages
  'org-babel-load-languages
@@ -193,7 +319,7 @@ NOTE: part of https://github.com/bbatsov/prelude."
 (require 'google-translate-smooth-ui)
 (setq google-translate-default-source-language "English")
 (setq google-translate-default-target-language "Russian")
-(global-set-key (kbd "C-t") 'google-translate-at-point)
+(global-set-key (kbd "C-t") 'translate-at-point2)
 (global-set-key (kbd "C-M-r") 'revert-buffer-no-confirm)
 (global-set-key (kbd "C-M-m") 'magit-status)
 (global-set-key (kbd "C-c SPC") 'ace-jump-mode)
@@ -253,7 +379,8 @@ NOTE: part of https://github.com/bbatsov/prelude."
     ("a9c09f6267b3c01f3d43afdb8a36e56f9edf90953ffbe993c176b6b662d3755f" "c383aa2e5b0756e28ac8d9af6340a87704edc1a11647ca710f178568ad033560" default)))
  '(google-translate-default-source-language "en")
  '(google-translate-default-target-language "ru")
- '(hourglass-delay 1))
+ '(hourglass-delay 1)
+ '(safe-local-variable-values (quote ((Syntax . Common-Lisp)))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
