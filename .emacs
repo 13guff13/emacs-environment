@@ -8,11 +8,25 @@
 (global-set-key (kbd "C-M-j") 'to-speak-region)
 (global-set-key (kbd "C-c g") 'revert-buffer)
 
-  ;; global default hotkey.
   (global-set-key (kbd "C-l") 'recenter-top-bottom)
   (global-set-key (kbd "C-u") 'recenter)
+  ;; global default hotkey.
+;; org mode
+;;(add-to-list 'org-emphasis-alist
+;;             '("*" (:foreground "red")
+;;               ))
+
 
 ;; global settings
+
+;; reduce the frequency of garbage collection by making it happen on
+;; each 50MB of allocated data (the default is on every 0.76MB)
+(setq gc-cons-threshold 50000000)
+
+;; warn when opening files bigger than 100MB
+(setq large-file-warning-threshold 100000000)
+
+(setq jit-lock-defer-time 0.05)
 (defalias 'yes-or-no-p 'y-or-n-p)
 
 (setq make-backup-files nil)
@@ -66,7 +80,7 @@
 (defun to-speak-region (start end)
   "Print number of lines and characters in the region."
   (interactive "r")
-  (eshell-command (concat "espeak -s 90 -v en-uk  --ipa=2 \"" (buffer-substring start end) "\""))
+  (eshell-command (concat "espeak -g 10 -s 70 -v en-uk  --ipa=2 \"" (buffer-substring start end) "\""))
 ;;  (message "%s" (concat "espeak -s 100 -v en-uk  --ipa=2 \"" (buffer-substring start end) "\""))
 )
 
@@ -140,13 +154,14 @@ NOTE: part of https://github.com/bbatsov/prelude."
       (select-window (display-buffer buffer-name))
       (set-buffer buffer-name)
       (set-process-sentinel
-       (start-file-process "jopa" buffer-name "~/emacs/sbcl/dictionary/dictionary-cli2.lisp" str)
+       (start-file-process "jopa" buffer-name "~/emacs/sbcl/dictionary/dictionary-cli2.lisp.bin" str)
        (lambda (process string)
          (message "I've done."))))))
 ;;; translate UI functions.
 
 (global-set-key (kbd "C-t") 'mc/mark-next-like-this)
-
+(add-to-list 'load-path "/home/guff/.emacs.d/manual-packages/eap/")
+;;(require 'org-drill)
 (require 'package)
 (add-to-list
    'package-archives
@@ -155,6 +170,26 @@ NOTE: part of https://github.com/bbatsov/prelude."
 (package-initialize)
 (add-to-list 'package-archives '("marmalade" . "https://marmalade-repo.org/packages/"))
 (package-initialize)
+
+;;grep
+(add-to-list 'load-path "/home/guff/.emacs.d/manual-packages/igrep/")
+(require 'igrep)
+
+(autoload 'igrep "igrep"
+  "*Run `grep` PROGRAM to match REGEX in FILES..." t)
+(autoload 'igrep-find "igrep"
+  "*Run `grep` via `find`..." t)
+(autoload 'igrep-visited-files "igrep"
+  "*Run `grep` ... on all visited files." t)
+(autoload 'dired-do-igrep "igrep"
+  "*Run `grep` on the marked (or next prefix ARG) files." t)
+(autoload 'dired-do-igrep-find "igrep"
+  "*Run `grep` via `find` on the marked (or next prefix ARG) directories." t)
+(autoload 'Buffer-menu-igrep "igrep"
+  "*Run `grep` on the files visited in buffers marked with '>'." t)
+(autoload 'igrep-insinuate "igrep"
+  "Define `grep' aliases for the corresponding `igrep' commands." t)
+
 
 (require 'grep-a-lot)
 (grep-a-lot-setup-keys)
@@ -295,6 +330,14 @@ NOTE: part of https://github.com/bbatsov/prelude."
 	      '(ac-source-abbrev ac-source-dictionary  ac-source-words-in-same-mode-buffers))
 (ac-config-default)
 
+(add-to-list 'load-path "/home/guff/.emacs.d/manual-packages/eap/")
+(require 'eap-autoloads)
+(setq eap-music-library
+      "/media/guff/ee5f827f-e13a-4d2a-8abc-bed9f94296a2/muz/" ;default value "~/Music"
+
+      eap-playlist-library
+      "~/eap-playlist-library") ;default value "~/eap-playlist-library"
+
 (add-to-list 'load-path "/home/guff/.emacs.d/elpa/ag.el-master")
 (require 'ag)
 
@@ -303,15 +346,19 @@ NOTE: part of https://github.com/bbatsov/prelude."
 (projectile-global-mode)
 
 ;;(add-to-list 'load-path "~/.emacs.d/elpa/helm-projectile-0.10.0/")
-;;(require 'helm-config)
-(require 'yasnippet)
-(yas-global-mode 1)
-(setq yas-snippet-dirs
-      '("/home/guff/.emacs.d/elpa/yasnippet-0.8.0/snippets"                 ;; personal snippets
-        "/path/to/some/collection/"           ;; foo-mode and bar-mode snippet collection
-        "/path/to/yasnippet/yasmate/snippets" ;; the yasmate collection
-        "/path/to/yasnippet/snippets"         ;; the default collection
-	        ))
+;; open realy large file to 500MB and even more on 64 bit system.
+(require 'vlf-setup)
+
+(require 'helm-config)
+
+;;(require 'yasnippet)
+;;(yas-global-mode 1)
+;;(setq yas-snippet-dirs
+;;      '("/home/guff/.emacs.d/elpa/yasnippet-0.8.0/snippets"                 ;; personal snippets
+;;        "/path/to/some/collection/"           ;; foo-mode and bar-mode snippet collection
+;;        "/path/to/yasnippet/yasmate/snippets" ;; the yasmate collection
+;;        "/path/to/yasnippet/snippets"         ;; the default collection
+;;	        ))
 (require 'sr-speedbar)
 (global-set-key (kbd "<f12>") 'sr-speedbar-toggle)
 (require 'emmet-mode)
@@ -380,6 +427,9 @@ NOTE: part of https://github.com/bbatsov/prelude."
  '(google-translate-default-source-language "en")
  '(google-translate-default-target-language "ru")
  '(hourglass-delay 1)
+ '(org-modules
+   (quote
+    (org-bbdb org-bibtex org-docview org-gnus org-info org-irc org-mhe org-rmail org-w3m org-drill)))
  '(safe-local-variable-values (quote ((Syntax . Common-Lisp)))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
